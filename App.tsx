@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Button } from "react-native";
-import { CameraType, CameraView, useCameraPermissions } from "expo-camera"; // Correct import of the camera
+import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
 
 const CameraApp = () => {
 
@@ -56,7 +56,7 @@ const CameraApp = () => {
 
 const styles = StyleSheet.create({
   container: { 
-    flex: 1, Z
+    flex: 1,
     justifyContent: "center", 
     alignItems: "center", 
     backgroundColor: "#f0f0f0" 

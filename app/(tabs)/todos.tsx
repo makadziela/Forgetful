@@ -2,14 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 
-
 export default function TodoScreen() {
-
   const [todos, setTodos] = useState<string[]>([]);
   const [newTodo, setNewTodo] = useState('');
   const router = useRouter();
 
-  
   const addTodo = () => {
     if (todos.length >= 9) {
       Alert.alert(
@@ -24,12 +21,10 @@ export default function TodoScreen() {
     setNewTodo('');
   };
 
-  
   const deleteTodo = (index: number) => {
     const newTodos = todos.filter((_, i) => i !== index);
     setTodos(newTodos);
   };
-
 
   const goToNotes = () => {
     router.push('/notes');
@@ -38,7 +33,6 @@ export default function TodoScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.counter}>Tasks: {todos.length}/9</Text>
-      {/* Input area for new todos */}
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -51,7 +45,6 @@ export default function TodoScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* List of todos */}
       <View style={styles.todoList}>
         {todos.map((todo, index) => (
           <View key={index} style={styles.todoItem}>
@@ -66,7 +59,6 @@ export default function TodoScreen() {
         ))}
       </View>
 
-      {/* Button to navigate to notes */}
       <TouchableOpacity style={styles.notesButton} onPress={goToNotes}>
         <Text style={styles.notesButtonText}>Go to Notes with Photos</Text>
       </TouchableOpacity>

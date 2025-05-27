@@ -12,6 +12,7 @@ type Note = {
   priority: number;
   completed: boolean;
   completedAt?: Date;
+  imageUri?: string;
 };
 
 export default function NotesScreen() {
@@ -95,7 +96,8 @@ export default function NotesScreen() {
         id: Date.now().toString(),
         text: newNote,
         priority,
-        completed: false
+        completed: false,
+        imageUri: selectedImage || undefined
       };
 
       const updatedNotes = [...notes, note];
@@ -103,6 +105,7 @@ export default function NotesScreen() {
       saveNotes(updatedNotes);
       setNewNote('');
       setPriority(1);
+      setSelectedImage(null);
     }
   };
 
@@ -159,6 +162,9 @@ export default function NotesScreen() {
               ))}
             </View>
           </View>
+          <TouchableOpacity style={styles.cameraButton} onPress={takePhoto}>
+            <Text style={styles.cameraButtonText}>📸</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.addButton, activeNotes.length >= 9 && styles.addButtonDisabled]}
             onPress={addNote}
@@ -168,16 +174,55 @@ export default function NotesScreen() {
           </TouchableOpacity>
         </View>
 
+        {selectedImage && (
+          <View style={styles.imagePreviewContainer}>
+            <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
+            <TouchableOpacity 
+              style={styles.removeImageButton}
+              onPress={() => setSelectedImage(null)}
+            >
+              <Text style={styles.removeImageButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <ScrollView style={styles.notesList}>
           {activeNotes.map((note) => (
-            <View key={note.id} style={styles.noteItem}>
+            <View 
+              key={note.id} 
+              style={[
+                styles.noteItem,
+                {
+                  borderLeftColor: 
+                    note.priority === 3 ? '#FF3B30' : 
+                    note.priority === 2 ? '#4CAF50' : 
+                    '#007AFF'
+                }
+              ]}
+            >
               <View style={styles.noteContent}>
                 <Text style={styles.noteText}>{note.text}</Text>
                 <View style={styles.priorityIndicator}>
                   {[...Array(note.priority)].map((_, i) => (
-                    <Text key={i} style={styles.priorityDot}>•</Text>
+                    <Text 
+                      key={i} 
+                      style={[
+                        styles.priorityDot,
+                        {
+                          color: 
+                            note.priority === 3 ? '#FF3B30' : 
+                            note.priority === 2 ? '#4CAF50' : 
+                            '#007AFF'
+                        }
+                      ]}
+                    >
+                      •
+                    </Text>
                   ))}
                 </View>
+                {note.imageUri && (
+                  <Image source={{ uri: note.imageUri }} style={styles.noteImage} />
+                )}
               </View>
               <TouchableOpacity onPress={() => deleteNote(note.id)}>
                 <Ionicons name="checkmark-circle-outline" size={24} color="#4CAF50" />
@@ -191,6 +236,9 @@ export default function NotesScreen() {
               {completedNotes.map((note) => (
                 <View key={note.id} style={styles.completedNoteItem}>
                   <Text style={styles.completedNoteText}>{note.text}</Text>
+                  {note.imageUri && (
+                    <Image source={{ uri: note.imageUri }} style={styles.completedNoteImage} />
+                  )}
                   <Text style={styles.completedDate}>
                     {note.completedAt?.toLocaleDateString()}
                   </Text>
@@ -278,6 +326,31 @@ const styles = StyleSheet.create({
   priorityButtonTextActive: {
     color: 'white',
   },
+  cameraButton: {
+    backgroundColor: '#FF3B30',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  cameraButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
   addButton: {
     backgroundColor: '#007AFF',
     padding: 12,
@@ -308,6 +381,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    borderLeftWidth: 5,
   },
   noteContent: {
     flex: 1,
@@ -320,11 +394,43 @@ const styles = StyleSheet.create({
   },
   priorityIndicator: {
     flexDirection: 'row',
+    marginBottom: 5,
   },
   priorityDot: {
     fontSize: 20,
     color: '#007AFF',
     marginRight: 2,
+  },
+  noteImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 5,
+    marginTop: 5,
+  },
+  imagePreviewContainer: {
+    marginBottom: 20,
+    position: 'relative',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 5,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 5,
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeImageButtonText: {
+    color: 'white',
+    fontSize: 16,
   },
   completedSection: {
     marginTop: 20,
@@ -348,6 +454,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
     textDecorationLine: 'line-through',
+  },
+  completedNoteImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 5,
+    marginTop: 10,
   },
   completedDate: {
     fontSize: 12,
