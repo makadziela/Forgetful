@@ -1,41 +1,56 @@
 {
   "expo": {
-    "name": "myfirstmobileapp",
-    "slug": "myfirstmobileapp",
+    "name": "MyFirstMobileApp",
+    "slug": "MyFirstMobileApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs access to camera to take photos for notes"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "CAMERA",
+        "android.permission.CAMERA"
+      ],
+      "package": "com.anonymous.MyFirstMobileApp"
     },
     "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router",
       [
-        "expo-splash-screen",
+        "expo-camera",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "cameraPermission": "The app needs access to camera to take photos for notes."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app needs access to your photos to save images for notes."
         }
       ]
     ],
+    "sdkVersion": "53.0.0",
     "experiments": {
-      "typedRoutes": true
+      "reactNativeNewArchitecture": true
     }
   }
 }

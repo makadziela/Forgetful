@@ -1,0 +1,357 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { Stack } from 'expo-router';
+import { Camera } from 'expo-camera';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
+
+type Note = {
+  id: string;
+  text: string;
+  priority: number;
+  completed: boolean;
+  completedAt?: Date;
+};
+
+export default function NotesScreen() {
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [newNote, setNewNote] = useState('');
+  const [priority, setPriority] = useState(1);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadNotes();
+  }, []);
+
+  const loadNotes = async () => {
+    try {
+      const savedNotes = await AsyncStorage.getItem('notes');
+      if (savedNotes) {
+        const parsedNotes: Note[] = JSON.parse(savedNotes);
+    
+        const notesWithDates = parsedNotes.map(note => {
+          if (note.completed && note.completedAt) {
+            return { ...note, completedAt: new Date(note.completedAt) };
+          }
+          return note;
+        });
+        setNotes(notesWithDates);
+      }
+    } catch (error) {
+      console.error('Error loading notes:', error);
+    }
+  };
+
+  const saveNotes = async (updatedNotes: Note[]) => {
+    try {
+      await AsyncStorage.setItem('notes', JSON.stringify(updatedNotes));
+    } catch (error) {
+      console.error('Error saving notes:', error);
+    }
+  };
+
+  const takePhoto = async () => {
+    try {
+      const cameraPermission = await Camera.requestCameraPermissionsAsync();
+      
+      if (cameraPermission.status !== 'granted') {
+        Alert.alert(
+          "Camera Permission",
+          "We need camera access to take photos. Please enable it in your device settings.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 1,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        cameraType: ImagePicker.CameraType.back,
+      });
+
+      if (!result.canceled) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Could not access camera. Please try again.");
+      console.log(error);
+    }
+  };
+
+  const addNote = () => {
+    if (newNote.trim()) {
+      const activeTasks = notes.filter(note => !note.completed).length;
+      if (activeTasks >= 9) {
+        Alert.alert(
+          'Maximum Tasks Reached',
+          'You have reached the maximum of 9 active tasks. Please complete or remove some tasks before adding new ones.'
+        );
+        return;
+      }
+
+      const note: Note = {
+        id: Date.now().toString(),
+        text: newNote,
+        priority,
+        completed: false
+      };
+
+      const updatedNotes = [...notes, note];
+      setNotes(updatedNotes);
+      saveNotes(updatedNotes);
+      setNewNote('');
+      setPriority(1);
+    }
+  };
+
+  const deleteNote = (id: string) => {
+    const updatedNotes = notes.map(note => {
+      if (note.id === id) {
+        return { ...note, completed: true, completedAt: new Date() };
+      }
+      return note;
+    });
+    setNotes(updatedNotes);
+    saveNotes(updatedNotes);
+  };
+
+  const activeNotes = notes.filter(note => !note.completed);
+  const completedNotes = notes.filter(note => note.completed);
+
+  return (
+    <>
+      <Stack.Screen options={{ title: "Tasks" }} />
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Tasks</Text>
+          <Text style={styles.counter}>Active Tasks: {activeNotes.length}/9</Text>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            value={newNote}
+            onChangeText={setNewNote}
+            placeholder="Add a new task..."
+            placeholderTextColor="#666"
+          />
+          <View style={styles.priorityContainer}>
+            <Text style={styles.priorityLabel}>Priority:</Text>
+            <View style={styles.priorityButtons}>
+              {[1, 2, 3].map((p) => (
+                <TouchableOpacity
+                  key={p}
+                  style={[
+                    styles.priorityButton,
+                    priority === p && styles.priorityButtonActive,
+                  ]}
+                  onPress={() => setPriority(p)}
+                >
+                  <Text style={[
+                    styles.priorityButtonText,
+                    priority === p && styles.priorityButtonTextActive,
+                  ]}>
+                    {p}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <TouchableOpacity
+            style={[styles.addButton, activeNotes.length >= 9 && styles.addButtonDisabled]}
+            onPress={addNote}
+            disabled={activeNotes.length >= 9}
+          >
+            <Text style={styles.addButtonText}>Add Task</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.notesList}>
+          {activeNotes.map((note) => (
+            <View key={note.id} style={styles.noteItem}>
+              <View style={styles.noteContent}>
+                <Text style={styles.noteText}>{note.text}</Text>
+                <View style={styles.priorityIndicator}>
+                  {[...Array(note.priority)].map((_, i) => (
+                    <Text key={i} style={styles.priorityDot}>•</Text>
+                  ))}
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => deleteNote(note.id)}>
+                <Ionicons name="checkmark-circle-outline" size={24} color="#4CAF50" />
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          {completedNotes.length > 0 && (
+            <View style={styles.completedSection}>
+              <Text style={styles.completedTitle}>Completed Tasks</Text>
+              {completedNotes.map((note) => (
+                <View key={note.id} style={styles.completedNoteItem}>
+                  <Text style={styles.completedNoteText}>{note.text}</Text>
+                  <Text style={styles.completedDate}>
+                    {note.completedAt?.toLocaleDateString()}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      </View>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    padding: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  counter: {
+    fontSize: 16,
+    color: '#666',
+  },
+  inputContainer: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 10,
+    fontSize: 16,
+  },
+  priorityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  priorityLabel: {
+    marginRight: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  priorityButtons: {
+    flexDirection: 'row',
+  },
+  priorityButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 5,
+  },
+  priorityButtonActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  priorityButtonText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  priorityButtonTextActive: {
+    color: 'white',
+  },
+  addButton: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  addButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  notesList: {
+    flex: 1,
+  },
+  noteItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  noteContent: {
+    flex: 1,
+    marginRight: 10,
+  },
+  noteText: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 5,
+  },
+  priorityIndicator: {
+    flexDirection: 'row',
+  },
+  priorityDot: {
+    fontSize: 20,
+    color: '#007AFF',
+    marginRight: 2,
+  },
+  completedSection: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+  },
+  completedTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    marginBottom: 10,
+  },
+  completedNoteItem: {
+    backgroundColor: '#f8f8f8',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  completedNoteText: {
+    fontSize: 16,
+    color: '#999',
+    textDecorationLine: 'line-through',
+  },
+  completedDate: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 5,
+  },
+}); 

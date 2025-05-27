@@ -1,74 +1,112 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, TextInput } from "react-native";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function TaskScreen() {
+  const [tasks, setTasks] = useState<string[]>([]);
+  const [newTask, setNewTask] = useState("");
 
-export default function HomeScreen() {
+  const addTask = () => {
+    if (tasks.length >= 9) {
+      alert("You can only have 9 tasks. Please remove some tasks first.");
+      return;
+    }
+    if (newTask.trim()) {
+      setTasks([...tasks, newTask]);
+      setNewTask("");
+    }
+  };
+
+  const removeTask = (index: number) => {
+    const newTasks = tasks.filter((_, i) => i !== index);
+    setTasks(newTasks);
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <View style={styles.container}>
+      <Text style={styles.title}>My Tasks</Text>
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          value={newTask}
+          onChangeText={setNewTask}
+          placeholder="Add new task"
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        <TouchableOpacity style={styles.button} onPress={addTask}>
+          <Text style={styles.buttonText}>Add</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.taskList}>
+        {tasks.map((task, index) => (
+          <View key={index} style={styles.taskItem}>
+            <Text style={styles.taskText}>{task}</Text>
+            <TouchableOpacity
+              style={styles.removeButton}
+              onPress={() => removeTask(index)}
+            >
+              <Text style={styles.removeButtonText}>X</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "#f0f0f0",
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  inputContainer: {
+    flexDirection: "row",
+    marginBottom: 20,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: "white",
+    padding: 10,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  button: {
+    backgroundColor: "#007AFF",
+    padding: 10,
+    borderRadius: 5,
+    justifyContent: "center",
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+  },
+  taskList: {
+    flex: 1,
+  },
+  taskItem: {
+    flexDirection: "row",
+    backgroundColor: "white",
+    padding: 15,
+    borderRadius: 5,
+    marginBottom: 10,
+    alignItems: "center",
+  },
+  taskText: {
+    flex: 1,
+    fontSize: 16,
+  },
+  removeButton: {
+    backgroundColor: "#ff3b30",
+    padding: 5,
+    borderRadius: 5,
+  },
+  removeButtonText: {
+    color: "white",
+    fontSize: 16,
   },
 });
