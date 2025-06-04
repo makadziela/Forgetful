@@ -127,7 +127,7 @@ export default function NotesScreen() {
 
   const updateNote = () => {
     if (editingNoteId === null || !newNote.trim()) {
-      return;
+      return; // Should not happen if UI is correct, but for safety
     }
 
     const updatedNotes = notes.map(note => {
@@ -135,7 +135,7 @@ export default function NotesScreen() {
         return {
           ...note,
           text: newNote,
-          priority: priority,
+          priority: priority, // Allow changing priority during edit
           imageUri: selectedImage || undefined,
         };
       }
@@ -144,11 +144,11 @@ export default function NotesScreen() {
 
     setNotes(updatedNotes);
     saveNotes(updatedNotes);
-    setEditingNoteId(null);
+    setEditingNoteId(null); // Exit editing mode
   };
 
   const cancelEdit = () => {
-    setEditingNoteId(null);
+    setEditingNoteId(null); // Exit editing mode
   };
 
   const deleteNote = (id: string) => {
@@ -207,6 +207,8 @@ export default function NotesScreen() {
           <TouchableOpacity style={styles.cameraButton} onPress={takePhoto}>
             <Text style={styles.cameraButtonText}>📸</Text>
           </TouchableOpacity>
+
+          {/* Show Add Task button when not editing */}
           {editingNoteId === null && (
             <TouchableOpacity
               style={[styles.addButton, activeNotes.length >= 9 && styles.addButtonDisabled]}
@@ -216,6 +218,8 @@ export default function NotesScreen() {
               <Text style={styles.addButtonText}>Add Task</Text>
             </TouchableOpacity>
           )}
+
+          {/* Show Save and Cancel buttons when editing */}
           {editingNoteId !== null && (
             <View style={styles.editingButtonsContainer}>
               <TouchableOpacity style={styles.addButtonEditing} onPress={updateNote}>
@@ -226,6 +230,7 @@ export default function NotesScreen() {
               </TouchableOpacity>
             </View>
           )}
+
         </View>
 
         {selectedImage && (
@@ -239,12 +244,11 @@ export default function NotesScreen() {
             </TouchableOpacity>
           </View>
         )}
-
         <ScrollView style={styles.notesList}>
           {activeNotes.map((note) => (
             <TouchableOpacity 
               key={note.id} 
-              onPress={() => setEditingNoteId(note.id)}
+              onPress={() => setEditingNoteId(note.id)} 
               style={[
                 styles.noteItem,
                 {
@@ -257,7 +261,7 @@ export default function NotesScreen() {
               ]}
             >
               <TouchableOpacity onPress={() => deleteNote(note.id)} style={styles.completionButtonLeft}>
-                <Ionicons name="checkmark-circle-outline" size={24} color="#808080" />
+                <Ionicons name="checkmark-circle-outline" size={24} color="#808080" /> 
               </TouchableOpacity>
               <View style={styles.noteContent}>
                 <Text style={styles.noteText}>{note.text}</Text>
@@ -273,8 +277,7 @@ export default function NotesScreen() {
                             note.priority === 2 ? '#4CAF50' : 
                             '#007AFF'
                         }
-                      ]}
-                    >
+                      ]}>
                       •
                     </Text>
                   ))}
@@ -412,8 +415,6 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 5,
     alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
   },
   addButtonDisabled: {
     backgroundColor: '#ccc',
@@ -490,6 +491,46 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
   },
+  cancelButton: {
+    backgroundColor: '#999', // Gray color for cancel
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  cancelButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  editingItem: {
+    borderColor: '#007AFF', // Highlight color
+    borderWidth: 2,
+  },
+  editingButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  addButtonEditing: {
+    flex: 1,
+    marginRight: 5,
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonEditing: {
+    flex: 1,
+    marginLeft: 5,
+    backgroundColor: '#999',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   completedSection: {
     marginTop: 20,
     paddingTop: 20,
@@ -523,48 +564,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginTop: 5,
-  },
-  completionButtonLeft: {
-    marginRight: 10,
-  },
-  cancelButton: {
-    backgroundColor: '#999',
-    padding: 12,
-    borderRadius: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 10,
-  },
-  cancelButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  editingItem: {
-    borderColor: '#007AFF',
-    borderWidth: 2,
-  },
-  editingButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  addButtonEditing: {
-    flex: 1,
-    marginRight: 5,
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButtonEditing: {
-    flex: 1,
-    marginLeft: 5,
-    backgroundColor: '#999',
-    padding: 12,
-    borderRadius: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 }); 

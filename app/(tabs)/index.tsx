@@ -114,8 +114,8 @@ export default function TaskScreen() {
   const activeTasks = tasks.filter(task => !task.completed);
   const completedTasks = tasks.filter(task => task.completed);
 
-  return (
-    <View style={styles.container}>
+    return (
+      <View style={styles.container}>
       <Text style={styles.title}>My Tasks</Text>
       <Text style={styles.counter}>Active Tasks: {activeTasks.length}/9</Text>
       
@@ -141,12 +141,12 @@ export default function TaskScreen() {
       {selectedImage && (
         <View style={styles.imagePreviewContainer}>
           <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
-          <TouchableOpacity 
+              <TouchableOpacity 
             style={styles.removeImageButton}
             onPress={() => setSelectedImage(null)}
-          >
+              >
             <Text style={styles.removeImageButtonText}>✕</Text>
-          </TouchableOpacity>
+              </TouchableOpacity>
         </View>
       )}
 
@@ -159,12 +159,12 @@ export default function TaskScreen() {
                 <Image source={{ uri: task.imageUri }} style={styles.taskImage} />
               )}
             </View>
-            <TouchableOpacity
+        <TouchableOpacity 
               style={styles.removeButton}
               onPress={() => removeTask(task.id)}
-            >
+        >
               <Text style={styles.removeButtonText}>✓</Text>
-            </TouchableOpacity>
+        </TouchableOpacity>
           </View>
         ))}
 

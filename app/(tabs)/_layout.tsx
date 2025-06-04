@@ -9,14 +9,7 @@ export default function TabLayout() {
         headerShown: false,
       }}>
       <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Camera',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="camera.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="todos"
+        name="notes"
         options={{
           title: 'Tasks',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="checklist" color={color} />,
