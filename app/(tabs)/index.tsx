@@ -1,49 +1,71 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Image, Alert } from "react-native";
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Stack } from 'expo-router';
 import { Camera } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-type Task = {
+type Note = {
   id: string;
   text: string;
-  imageUri?: string;
+  priority: number;
   completed: boolean;
   completedAt?: Date;
+  imageUri?: string;
 };
 
-export default function TaskScreen() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [newTask, setNewTask] = useState("");
+export default function NotesScreen() {
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [newNote, setNewNote] = useState('');
+  const [priority, setPriority] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadTasks();
+    loadNotes();
   }, []);
 
-  const loadTasks = async () => {
+  useEffect(() => {
+    if (editingNoteId !== null) {
+      const noteToEdit = notes.find(note => note.id === editingNoteId);
+      if (noteToEdit) {
+        setNewNote(noteToEdit.text);
+        setPriority(noteToEdit.priority);
+        setSelectedImage(noteToEdit.imageUri || null);
+      }
+    } else {
+      setNewNote('');
+      setPriority(1);
+      setSelectedImage(null);
+    }
+  }, [editingNoteId, notes]);
+
+  const loadNotes = async () => {
     try {
-      const savedTasks = await AsyncStorage.getItem('tasks');
-      if (savedTasks) {
-        const parsedTasks: Task[] = JSON.parse(savedTasks);
-        const tasksWithDates = parsedTasks.map(task => {
-          if (task.completed && task.completedAt) {
-            return { ...task, completedAt: new Date(task.completedAt) };
+      const savedNotes = await AsyncStorage.getItem('notes');
+      if (savedNotes) {
+        const parsedNotes: Note[] = JSON.parse(savedNotes);
+    
+        const notesWithDates = parsedNotes.map(note => {
+          if (note.completed && note.completedAt) {
+            return { ...note, completedAt: new Date(note.completedAt) };
           }
-          return task;
+          return note;
         });
-        setTasks(tasksWithDates);
+        setNotes(notesWithDates);
       }
     } catch (error) {
-      console.error('Error loading tasks:', error);
+      console.error('Error loading notes:', error);
     }
   };
 
-  const saveTasks = async (updatedTasks: Task[]) => {
+  const saveNotes = async (updatedNotes: Note[]) => {
     try {
-      await AsyncStorage.setItem('tasks', JSON.stringify(updatedTasks));
+      await AsyncStorage.setItem('notes', JSON.stringify(updatedNotes));
     } catch (error) {
-      console.error('Error saving tasks:', error);
+      console.error('Error saving notes:', error);
     }
   };
 
@@ -76,200 +98,373 @@ export default function TaskScreen() {
     }
   };
 
-  const addTask = () => {
-    if (tasks.length >= 9) {
-      Alert.alert(
-        'Maximum Tasks Reached',
-        'You have reached the maximum of 9 tasks. Please complete or remove some tasks before adding new ones.'
-      );
-      return;
-    }
-    if (newTask.trim()) {
-      const task: Task = {
+  const addNote = () => {
+    if (newNote.trim()) {
+      const activeTasks = notes.filter(note => !note.completed).length;
+      if (activeTasks >= 9) {
+        Alert.alert(
+          'Maximum Tasks Reached',
+          'You have reached the maximum of 9 active tasks. Please complete or remove some tasks before adding new ones.'
+        );
+        return;
+      }
+
+      const note: Note = {
         id: Date.now().toString(),
-        text: newTask,
-        imageUri: selectedImage || undefined,
-        completed: false
+        text: newNote,
+        priority,
+        completed: false,
+        imageUri: selectedImage || undefined
       };
 
-      const updatedTasks = [...tasks, task];
-      setTasks(updatedTasks);
-      saveTasks(updatedTasks);
-      setNewTask("");
+      const updatedNotes = [...notes, note];
+      setNotes(updatedNotes);
+      saveNotes(updatedNotes);
+      setNewNote('');
+      setPriority(1);
       setSelectedImage(null);
     }
   };
 
-  const removeTask = (id: string) => {
-    const updatedTasks = tasks.map(task => {
-      if (task.id === id) {
-        return { ...task, completed: true, completedAt: new Date() };
+  const updateNote = () => {
+    if (editingNoteId === null || !newNote.trim()) {
+      return;
+    }
+
+    const updatedNotes = notes.map(note => {
+      if (note.id === editingNoteId) {
+        return {
+          ...note,
+          text: newNote,
+          priority: priority,
+          imageUri: selectedImage || undefined,
+        };
       }
-      return task;
+      return note;
     });
-    setTasks(updatedTasks);
-    saveTasks(updatedTasks);
+
+    console.log('Updated Notes:', updatedNotes);
+    setNotes(updatedNotes);
+    saveNotes(updatedNotes);
+    setEditingNoteId(null);
   };
 
-  const activeTasks = tasks.filter(task => !task.completed);
-  const completedTasks = tasks.filter(task => task.completed);
+  const cancelEdit = () => {
+    setEditingNoteId(null);
+  };
 
-    return (
-      <View style={styles.container}>
-      <Text style={styles.title}>My Tasks</Text>
-      <Text style={styles.counter}>Active Tasks: {activeTasks.length}/9</Text>
-      
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          value={newTask}
-          onChangeText={setNewTask}
-          placeholder="Add new task"
-        />
-        <TouchableOpacity style={styles.cameraButton} onPress={takePhoto}>
-          <Text style={styles.buttonText}>📸</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.button, activeTasks.length >= 9 && styles.buttonDisabled]} 
-          onPress={addTask}
-          disabled={activeTasks.length >= 9}
-        >
-          <Text style={styles.buttonText}>Add</Text>
-        </TouchableOpacity>
-      </View>
+  const deleteNote = (id: string) => {
+    const updatedNotes = notes.map(note => {
+      if (note.id === id) {
+        return { ...note, completed: true, completedAt: new Date() };
+      }
+      return note;
+    });
+    setNotes(updatedNotes);
+    saveNotes(updatedNotes);
+  };
 
-      {selectedImage && (
-        <View style={styles.imagePreviewContainer}>
-          <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
-              <TouchableOpacity 
-            style={styles.removeImageButton}
-            onPress={() => setSelectedImage(null)}
-              >
-            <Text style={styles.removeImageButtonText}>✕</Text>
-              </TouchableOpacity>
+  const activeNotes = notes.filter(note => !note.completed);
+  const completedNotes = notes.filter(note => note.completed);
+
+  return (
+    <>
+      <Stack.Screen options={{ title: "Forgetful" }} />
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Forgetful</Text>
+          <Text style={styles.counter}>Active Tasks: {activeNotes.length}/9</Text>
         </View>
-      )}
 
-      <View style={styles.taskList}>
-        {activeTasks.map((task) => (
-          <View key={task.id} style={styles.taskItem}>
-            <View style={styles.taskContent}>
-              <Text style={styles.taskText}>{task.text}</Text>
-              {task.imageUri && (
-                <Image source={{ uri: task.imageUri }} style={styles.taskImage} />
-              )}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            value={newNote}
+            onChangeText={setNewNote}
+            placeholder="Add a new task..."
+            placeholderTextColor="#666"
+          />
+          <View style={styles.priorityContainer}>
+            <Text style={styles.priorityLabel}>Priority:</Text>
+            <View style={styles.priorityButtons}>
+              {[1, 2, 3].map((p) => (
+                <TouchableOpacity
+                  key={p}
+                  style={[
+                    styles.priorityButton,
+                    priority === p && styles.priorityButtonActive,
+                  ]}
+                  onPress={() => setPriority(p)}
+                >
+                  <Text style={[
+                    styles.priorityButtonText,
+                    priority === p && styles.priorityButtonTextActive,
+                  ]}>
+                    {p}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
-        <TouchableOpacity 
-              style={styles.removeButton}
-              onPress={() => removeTask(task.id)}
-        >
-              <Text style={styles.removeButtonText}>✓</Text>
-        </TouchableOpacity>
           </View>
-        ))}
+          <TouchableOpacity style={styles.cameraButton} onPress={takePhoto}>
+            <Text style={styles.cameraButtonText}>📸</Text>
+          </TouchableOpacity>
 
-        {completedTasks.length > 0 && (
-          <View style={styles.completedSection}>
-            <Text style={styles.completedTitle}>Completed Tasks</Text>
-            {completedTasks.map((task) => (
-              <View key={task.id} style={styles.completedTaskItem}>
-                <Text style={styles.completedTaskText}>{task.text}</Text>
-                {task.imageUri && (
-                  <Image source={{ uri: task.imageUri }} style={styles.completedTaskImage} />
-                )}
-                <Text style={styles.completedDate}>
-                  {task.completedAt?.toLocaleDateString()}
-                </Text>
-              </View>
-            ))}
+          {editingNoteId === null && (
+            <TouchableOpacity
+              style={[styles.addButton, activeNotes.length >= 9 && styles.addButtonDisabled]}
+              onPress={addNote}
+              disabled={activeNotes.length >= 9}
+            >
+              <Text style={styles.addButtonText}>Add Task</Text>
+            </TouchableOpacity>
+          )}
+
+          {editingNoteId !== null && (
+            <View style={styles.editingButtonsContainer}>
+              <TouchableOpacity style={styles.addButtonEditing} onPress={updateNote}>
+                <Text style={styles.addButtonText}>Save Changes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelButtonEditing} onPress={cancelEdit}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+        </View>
+
+        {selectedImage && (
+          <View style={styles.imagePreviewContainer}>
+            <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
+            <TouchableOpacity 
+              style={styles.removeImageButton}
+              onPress={() => setSelectedImage(null)}
+            >
+              <Text style={styles.removeImageButtonText}>✕</Text>
+            </TouchableOpacity>
           </View>
         )}
-      </View>
-    </View>
+        <ScrollView style={styles.notesList}>
+          {activeNotes.map((note) => (
+            <TouchableOpacity 
+              key={note.id} 
+              onPress={() => setEditingNoteId(note.id)} 
+              style={[
+                styles.noteItem,
+                {
+                  borderLeftColor: 
+                    note.priority === 3 ? '#FF3B30' : 
+                    note.priority === 2 ? '#4CAF50' : 
+                    '#007AFF'
+                },
+                editingNoteId === note.id && styles.editingItem,
+              ]}
+            >
+              <TouchableOpacity onPress={() => deleteNote(note.id)} style={styles.completionButtonLeft}>
+                <Ionicons name="checkmark-circle-outline" size={24} color="#808080" /> 
+              </TouchableOpacity>
+              <View style={styles.noteContent}>
+                <Text style={styles.noteText}>{note.text}</Text>
+                <View style={styles.priorityIndicator}>
+                  {[...Array(note.priority)].map((_, i) => (
+                    <Text 
+                      key={i} 
+                      style={[
+                        styles.priorityDot,
+                        {
+                          color: 
+                            note.priority === 3 ? '#FF3B30' : 
+                            note.priority === 2 ? '#4CAF50' : 
+                            '#007AFF'
+                        }
+                      ]}>
+                      •
+                    </Text>
+                  ))}
+                </View>
+                {note.imageUri && (
+                  <Image source={{ uri: note.imageUri }} style={styles.noteImage} />
+                )}
+              </View>
+            </TouchableOpacity>
+          ))}
+
+          {completedNotes.length > 0 && (
+            <View style={styles.completedSection}>
+              <Text style={styles.completedTitle}>Completed Tasks</Text>
+              {completedNotes.map((note) => (
+                <View key={note.id} style={styles.completedNoteItem}>
+                  <Text style={styles.completedNoteText}>{note.text}</Text>
+                  {note.imageUri && (
+                    <Image source={{ uri: note.imageUri }} style={styles.completedNoteImage} />
+                  )}
+                  <Text style={styles.completedDate}>
+                    {note.completedAt?.toLocaleDateString()}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
     padding: 20,
-    backgroundColor: "#f0f0f0",
+    paddingTop: 30,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 10,
-    textAlign: "center",
+    fontWeight: 'bold',
+    color: '#333',
   },
   counter: {
     fontSize: 16,
-    color: "#666",
+    color: '#666',
     marginBottom: 20,
-    textAlign: "center",
+    textAlign: 'center',
   },
   inputContainer: {
-    flexDirection: "row",
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 10,
     marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   input: {
-    flex: 1,
-    backgroundColor: "white",
-    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
     borderRadius: 5,
+    padding: 10,
+    marginBottom: 10,
+    fontSize: 16,
+  },
+  priorityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  priorityLabel: {
     marginRight: 10,
+    fontSize: 16,
+    color: '#666',
   },
-  button: {
-    backgroundColor: "#007AFF",
-    padding: 10,
-    borderRadius: 5,
-    justifyContent: "center",
+  priorityButtons: {
+    flexDirection: 'row',
   },
-  buttonDisabled: {
-    backgroundColor: "#ccc",
+  priorityButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 5,
+  },
+  priorityButtonActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  priorityButtonText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  priorityButtonTextActive: {
+    color: 'white',
   },
   cameraButton: {
-    backgroundColor: "#007AFF",
-    padding: 10,
+    backgroundColor: '#FF3B30',
+    padding: 12,
     borderRadius: 5,
-    justifyContent: "center",
+    alignItems: 'center',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  cameraButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  addButton: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  addButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  notesList: {
+    flex: 1,
+  },
+  noteItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    borderLeftWidth: 5,
+  },
+  noteContent: {
+    flex: 1,
     marginRight: 10,
   },
-  buttonText: {
-    color: "white",
+  noteText: {
     fontSize: 16,
-  },
-  taskList: {
-    flex: 1,
-  },
-  taskItem: {
-    flexDirection: "row",
-    backgroundColor: "white",
-    padding: 15,
-    borderRadius: 5,
-    marginBottom: 10,
-    alignItems: "center",
-  },
-  taskContent: {
-    flex: 1,
-  },
-  taskText: {
-    fontSize: 16,
+    color: '#333',
     marginBottom: 5,
   },
-  taskImage: {
+  priorityIndicator: {
+    flexDirection: 'row',
+    marginBottom: 5,
+  },
+  priorityDot: {
+    fontSize: 20,
+    color: '#007AFF',
+    marginRight: 2,
+  },
+  noteImage: {
     width: 100,
     height: 100,
     borderRadius: 5,
-  },
-  removeButton: {
-    backgroundColor: "#4CAF50",
-    padding: 8,
-    borderRadius: 5,
-    marginLeft: 10,
-  },
-  removeButtonText: {
-    color: "white",
-    fontSize: 16,
+    marginTop: 5,
   },
   imagePreviewContainer: {
     marginBottom: 20,
@@ -296,6 +491,49 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
   },
+  cancelButton: {
+    backgroundColor: '#999', // Gray color for cancel
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  cancelButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  editingItem: {
+    borderColor: '#007AFF', // Highlight color
+    borderWidth: 2,
+  },
+  completionButtonLeft: {
+    marginRight: 10, // Add some space between the button and the text
+  },
+  editingButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  addButtonEditing: {
+    flex: 1,
+    marginRight: 5,
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonEditing: {
+    flex: 1,
+    marginLeft: 5,
+    backgroundColor: '#999',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   completedSection: {
     marginTop: 20,
     paddingTop: 20,
@@ -308,18 +546,18 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 10,
   },
-  completedTaskItem: {
+  completedNoteItem: {
     backgroundColor: '#f8f8f8',
     padding: 15,
-    borderRadius: 5,
+    borderRadius: 10,
     marginBottom: 10,
   },
-  completedTaskText: {
+  completedNoteText: {
     fontSize: 16,
     color: '#999',
     textDecorationLine: 'line-through',
   },
-  completedTaskImage: {
+  completedNoteImage: {
     width: 100,
     height: 100,
     borderRadius: 5,
@@ -330,4 +568,4 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 5,
   },
-});
+}); 
