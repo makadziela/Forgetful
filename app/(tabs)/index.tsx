@@ -6,15 +6,9 @@ import { Camera } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-type Note = {
-  id: string;
-  text: string;
-  priority: number;
-  completed: boolean;
-  completedAt?: Date;
-  imageUri?: string;
-};
+import { Note } from '../../models/Note';
+import { loadNotes, saveNotes } from '../../services/TaskService';
+import { takePhoto } from '../../services/PhotoService';
 
 export default function NotesScreen() {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -24,7 +18,12 @@ export default function NotesScreen() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadNotes();
+    const initializeNotes = async () => {
+      const loadedNotes = await loadNotes();
+      setNotes(loadedNotes);
+      console.log('IndexScreen: Notes loaded into state:', loadedNotes.length);
+    };
+    initializeNotes();
   }, []);
 
   useEffect(() => {
@@ -42,72 +41,16 @@ export default function NotesScreen() {
     }
   }, [editingNoteId, notes]);
 
-  const loadNotes = async () => {
-    try {
-      const savedNotes = await AsyncStorage.getItem('notes');
-      if (savedNotes) {
-        const parsedNotes: Note[] = JSON.parse(savedNotes);
-    
-        const notesWithDates = parsedNotes.map(note => {
-          if (note.completed && note.completedAt) {
-            return { ...note, completedAt: new Date(note.completedAt) };
-          }
-          return note;
-        });
-        setNotes(notesWithDates);
-      }
-    } catch (error) {
-      console.error('Error loading notes:', error);
-    }
-  };
-
-  const saveNotes = async (updatedNotes: Note[]) => {
-    try {
-      await AsyncStorage.setItem('notes', JSON.stringify(updatedNotes));
-    } catch (error) {
-      console.error('Error saving notes:', error);
-    }
-  };
-
-  const takePhoto = async () => {
-    try {
-      const cameraPermission = await Camera.requestCameraPermissionsAsync();
-      
-      if (cameraPermission.status !== 'granted') {
-        Alert.alert(
-          "Camera Permission",
-          "We need camera access to take photos. Please enable it in your device settings.",
-          [{ text: "OK" }]
-        );
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: false,
-        quality: 1,
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        cameraType: ImagePicker.CameraType.back,
-      });
-
-      if (!result.canceled) {
-        setSelectedImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      Alert.alert("Error", "Could not access camera. Please try again.");
-      console.log(error);
-    }
-  };
-
   const addNote = () => {
     if (newNote.trim()) {
       const activeTasks = notes.filter(note => !note.completed).length;
       if (activeTasks >= 9) {
-        Alert.alert(
-          'Maximum Tasks Reached',
+      Alert.alert(
+        'Maximum Tasks Reached',
           'You have reached the maximum of 9 active tasks. Please complete or remove some tasks before adding new ones.'
-        );
-        return;
-      }
+      );
+      return;
+    }
 
       const note: Note = {
         id: Date.now().toString(),
@@ -167,7 +110,7 @@ export default function NotesScreen() {
   const activeNotes = notes.filter(note => !note.completed);
   const completedNotes = notes.filter(note => note.completed);
 
-  return (
+    return (
     <>
       <Stack.Screen options={{ title: "Forgetful" }} />
       <SafeAreaView style={styles.container}>
@@ -175,15 +118,15 @@ export default function NotesScreen() {
           <Text style={styles.title}>Forgetful</Text>
           <Text style={styles.counter}>Active Tasks: {activeNotes.length}/9</Text>
         </View>
-
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
+      
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
             value={newNote}
             onChangeText={setNewNote}
             placeholder="Add a new task..."
             placeholderTextColor="#666"
-          />
+        />
           <View style={styles.priorityContainer}>
             <Text style={styles.priorityLabel}>Priority:</Text>
             <View style={styles.priorityButtons}>
@@ -206,16 +149,16 @@ export default function NotesScreen() {
               ))}
             </View>
           </View>
-          <TouchableOpacity style={styles.cameraButton} onPress={takePhoto}>
+        <TouchableOpacity style={styles.cameraButton} onPress={() => takePhoto(setSelectedImage)}>
             <Text style={styles.cameraButtonText}>📸</Text>
-          </TouchableOpacity>
+        </TouchableOpacity>
 
           {editingNoteId === null && (
-            <TouchableOpacity
+        <TouchableOpacity 
               style={[styles.addButton, activeNotes.length >= 9 && styles.addButtonDisabled]}
               onPress={addNote}
               disabled={activeNotes.length >= 9}
-            >
+        >
               <Text style={styles.addButtonText}>Add Task</Text>
             </TouchableOpacity>
           )}
@@ -227,23 +170,23 @@ export default function NotesScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={styles.cancelButtonEditing} onPress={cancelEdit}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
+        </TouchableOpacity>
             </View>
           )}
 
-        </View>
+      </View>
 
-        {selectedImage && (
-          <View style={styles.imagePreviewContainer}>
-            <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
-            <TouchableOpacity 
-              style={styles.removeImageButton}
-              onPress={() => setSelectedImage(null)}
-            >
-              <Text style={styles.removeImageButtonText}>✕</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+      {selectedImage && (
+        <View style={styles.imagePreviewContainer}>
+          <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
+              <TouchableOpacity 
+            style={styles.removeImageButton}
+            onPress={() => setSelectedImage(null)}
+              >
+            <Text style={styles.removeImageButtonText}>✕</Text>
+              </TouchableOpacity>
+        </View>
+      )}
         <ScrollView style={styles.notesList}>
           {activeNotes.map((note) => (
             <TouchableOpacity 
@@ -284,27 +227,27 @@ export default function NotesScreen() {
                 </View>
                 {note.imageUri && (
                   <Image source={{ uri: note.imageUri }} style={styles.noteImage} />
-                )}
-              </View>
-            </TouchableOpacity>
-          ))}
+              )}
+            </View>
+        </TouchableOpacity>
+        ))}
 
           {completedNotes.length > 0 && (
-            <View style={styles.completedSection}>
-              <Text style={styles.completedTitle}>Completed Tasks</Text>
+          <View style={styles.completedSection}>
+            <Text style={styles.completedTitle}>Completed Tasks</Text>
               {completedNotes.map((note) => (
                 <View key={note.id} style={styles.completedNoteItem}>
                   <Text style={styles.completedNoteText}>{note.text}</Text>
                   {note.imageUri && (
                     <Image source={{ uri: note.imageUri }} style={styles.completedNoteImage} />
-                  )}
-                  <Text style={styles.completedDate}>
+                )}
+                <Text style={styles.completedDate}>
                     {note.completedAt?.toLocaleDateString()}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
         </ScrollView>
       </SafeAreaView>
     </>
@@ -568,4 +511,4 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 5,
   },
-}); 
+});
